@@ -1,9 +1,7 @@
 <script lang="ts">
-	import { filters } from "$lib/stores";
+	import { filters, electionFilterOptions, sortByOptions } from "$lib/stores";
 	import { AppBar } from "@skeletonlabs/skeleton";
-
-	const sortByOptions = ["newest", "oldest", "mostVotes", "deadline"];
-	const electionTypes = ["binary", "pick-n", "number"];
+	import { RadioGroup, RadioItem } from "@skeletonlabs/skeleton";
 
 	function handleTagChange(event: Event) {
 		const selectedTag = (event.target as HTMLInputElement).value;
@@ -21,35 +19,34 @@
 	}
 </script>
 
-<AppBar>
-	<label for="sort-by">Sort By:</label>
-	<select id="sort-by" bind:value={$filters.sortBy}>
-		{#each sortByOptions as option}
-			<option value={option}>{option}</option>
-		{/each}
-	</select>
+<label for="sort-by">Sort By:</label>
 
-	<label for="election-type">Type:</label>
-	<select class="select" id="election-type" bind:value={$filters.type}>
-		<option value="all">all</option>
-		{#each electionTypes as type}
-			<option value={type}>{type}</option>
-		{/each}
-	</select>
+<RadioGroup>
+	{#each sortByOptions as option, i}
+		<RadioItem bind:group={$filters.sortBy} name="justify" value={option}>{option}</RadioItem>
+	{/each}
+</RadioGroup>
 
-	<label for="tags">Tags:</label>
-	<input
-		type="text"
-		id="tags"
-		placeholder="Enter tags separated by commas"
-		on:change={handleTagChange}
-	/>
+<label for="election-type">Type:</label>
+<select class="select" id="election-type" bind:value={$filters.type}>
+	<option value="all">all</option>
+	{#each electionFilterOptions as type}
+		<option value={type}>{type}</option>
+	{/each}
+</select>
 
-	<label for="search">Search:</label>
-	<input
-		type="text"
-		id="search"
-		value={$filters.search}
-		on:input={handleSearchChange}
-	/>
-</AppBar>
+<label for="tags">Tags:</label>
+<input
+	type="text"
+	id="tags"
+	placeholder="Enter tags separated by commas"
+	on:change={handleTagChange}
+/>
+
+<label for="search">Search:</label>
+<input
+	type="text"
+	id="search"
+	value={$filters.search}
+	on:input={handleSearchChange}
+/>

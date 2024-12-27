@@ -121,11 +121,15 @@ export const userVotes: Writable<Record<ElectionId, UserVote>> = writable(
 	dummyUserVotes
 );
 export const userId: Writable<UserId | null> = writable(null);
+
+export const sortByOptions = ["newest", "oldest", "mostVotes", "deadline"] as const;
+export const electionFilterOptions = ["binary", "pick-n", "number", "all"] as const;
+
 export const filters: Writable<{
-	sortBy: "newest" | "oldest" | "mostVotes" | "deadline";
+	sortBy: typeof sortByOptions[number];
 	tags: string[];
 	search: string;
-	type: "binary" | "pick-n" | "number" | "all";
+	type: typeof electionFilterOptions[number];
 }> = writable({
 	sortBy: "newest",
 	tags: [],
