@@ -1,52 +1,60 @@
 <script lang="ts">
 	import { filters, electionFilterOptions, sortByOptions } from "$lib/stores";
-	import { AppBar } from "@skeletonlabs/skeleton";
 	import { RadioGroup, RadioItem } from "@skeletonlabs/skeleton";
-
-	function handleTagChange(event: Event) {
-		const selectedTag = (event.target as HTMLInputElement).value;
-		if ($filters.tags.includes(selectedTag)) {
-			$filters.tags = $filters.tags.filter((tag) => tag !== selectedTag);
-		} else {
-			$filters.tags = [...$filters.tags, selectedTag];
-		}
-		filters.set($filters);
-	}
-
-	function handleSearchChange(event: Event) {
-		$filters.search = (event.target as HTMLInputElement).value;
-		filters.set($filters);
-	}
 </script>
 
-<label for="sort-by">Sort By:</label>
+<form class="flex flex-col md:flex-row gap-3">
+	<!-- <div
+		class="inline-flex items-center space-x-1 rounded-full border border-black p-0"
+	>
+		{#each sortByOptions as option}
+			<label class="cursor-pointer">
+				<input
+					type="radio"
+					name="sort-by"
+					value={option}
+					class="sr-only peer"
+				/>
+				<span
+					class="rounded-full px-4 py-2 text-sm text-gray-600
+			   hover:bg-gray-100 peer-checked:bg-blue-600 peer-checked:text-white
+			   transition-colors"
+				>
+					{option}
+				</span>
+			</label>
+		{/each}
+	</div> -->
 
-<RadioGroup>
-	{#each sortByOptions as option, i}
-		<RadioItem bind:group={$filters.sortBy} name="justify" value={option}>{option}</RadioItem>
-	{/each}
-</RadioGroup>
+	<div class="p-3">
+		<RadioGroup>
+			{#each sortByOptions as option, i}
+				<RadioItem
+					bind:group={$filters.sortBy}
+					name="justify"
+					value={option}>{option}</RadioItem
+				>
+			{/each}
+		</RadioGroup>
+	</div>
+	<div class="p-3">
+		<RadioGroup>
+			{#each electionFilterOptions as option, i}
+				<RadioItem
+					bind:group={$filters.type}
+					name="justify"
+					value={option}>{option}</RadioItem
+				>
+			{/each}
+		</RadioGroup>
+	</div>
 
-<label for="election-type">Type:</label>
-<select class="select" id="election-type" bind:value={$filters.type}>
-	<option value="all">all</option>
-	{#each electionFilterOptions as type}
-		<option value={type}>{type}</option>
-	{/each}
-</select>
-
-<label for="tags">Tags:</label>
-<input
-	type="text"
-	id="tags"
-	placeholder="Enter tags separated by commas"
-	on:change={handleTagChange}
-/>
-
-<label for="search">Search:</label>
-<input
-	type="text"
-	id="search"
-	value={$filters.search}
-	on:input={handleSearchChange}
-/>
+	<div class="p-6 w-100">
+		<input
+			type="text"
+			placeholder="Search Elections"
+			class="input"
+			bind:value={$filters.search}
+		/>
+	</div>
+</form>
