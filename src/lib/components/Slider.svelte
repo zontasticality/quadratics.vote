@@ -1,123 +1,49 @@
 <script lang="ts">
-	import { onMount } from "svelte";
-
-	// Props received from App.svelte
 	let {
-		option,
-		value_normalized,
-		index,
-		onSliderDragStart,
-		onSliderValueChangeDuringDrag,
-		isCurrentlyDraggingThis,
+		option, // option data
+		value_normalized, // from -1 to 1
+		index, // for sending back events
+		onSliderDragStart, // callback to trigger drag start
+		onSliderValueChangeDuringDrag, // callback while dragging
+		isCurrentlyDraggingThis, // parent must track if we are currently dragging this slider
 	} = $props();
 
-	// Constants (could also be passed as props or imported from a shared file)
-	const VOTE_MIN_NORMALIZED = -1.0;
-	const VOTE_MAX_NORMALIZED = 1.0;
-	const VOTE_RANGE = VOTE_MAX_NORMALIZED - VOTE_MIN_NORMALIZED;
-	const DISPLAY_PRECISION = 2;
+	const DISPLAY_PRECISION = 2; // precision to display vote & credit amounts
+	const SLIDER_HANDLE_CLAMP_PADDING = 10; // padding from top or bottom of slider to prevent overrun
 
 	// DOM element references for calculations
 	let trackEl: HTMLDivElement;
-	let handleEl: HTMLDivElement;
 
-	// Utility function
-	function clamp(value: number, min: number, max: number) {
-		return Math.min(Math.max(value, min), max);
-	}
+	// Utility functions
+	const mapRange = (
+		value: number,
+		inMin: number,
+		inMax: number,
+		outMin: number,
+		outMax: number,
+	) => {
+		return ((value - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin;
+	};
+	const clamp = (v: number, min: number, max: number) =>
+		Math.min(Math.max(v, min), max);
 
 	// Fallback/default values for when elements are not yet rendered or have no dimensions
-	const APPROX_HANDLE_HEIGHT = 32; // Corresponds to CSS height for .slider-handle
-	const FALLBACK_HANDLE_TOP = `calc(50% - ${APPROX_HANDLE_HEIGHT / 2}px)`;
-	const FALLBACK_BAR_TOP = "50%";
-	const FALLBACK_BAR_HEIGHT = "0px";
 	const POSITIVE_BAR_COLOR = "#60a5fa"; // Tailwind blue-400
 	const NEGATIVE_BAR_COLOR = "#f87171"; // Tailwind red-400
 
 	// --- Reactive Style Calculations ---
 
-	// Shared calculation: Y-coordinate of handle's center relative to track's top.
-	// Returns null if track dimensions are not yet available.
-	let currentHandleHeight = $state(0);
+	// Shared calculation: Y-coordinate of handle's center relative to track's top
 	let currentTrackHeight = $state(0);
+	const barMiddlePointY = $derived(currentTrackHeight / 2);
 
-	const handleCenterYFromTop = $derived.by(() => {
-		const percent_of_range_for_position =
-			(value_normalized - VOTE_MIN_NORMALIZED) / VOTE_RANGE;
-		return currentTrackHeight * (1 - percent_of_range_for_position);
-	});
-
-	// Style for Handle Top
-	const handleStyleTop = $derived.by(() => {
-		const clamped_handle_y = clamp(
-			currentHandleHeight / 2,
-			0,
-			currentTrackHeight - currentHandleHeight,
-		);
-		return `${clamped_handle_y}px`;
-	});
-
-	// Style for Bar Top
-	const barStyleTop = $derived.by(() => {
-		const _ = value_normalized;
-		const currentTrackHeight = trackEl?.offsetHeight;
-		const hCenterY = handleCenterYFromTop;
-
-		if (
-			currentTrackHeight == null ||
-			currentTrackHeight === 0 ||
-			hCenterY == null
-		) {
-			return FALLBACK_BAR_TOP;
-		}
-
-		const zeroPointY = currentTrackHeight / 2;
-		let barTopPx;
-		let barHeightPx; // Needed for accurate clamping of barTopPx
-		if (value_normalized >= 0) {
-			barTopPx = hCenterY;
-			barHeightPx = Math.max(0, zeroPointY - hCenterY);
-		} else {
-			barTopPx = zeroPointY;
-			barHeightPx = Math.max(0, hCenterY - zeroPointY);
-		}
-		return `${clamp(barTopPx, 0, currentTrackHeight - barHeightPx)}px`;
-	});
-
-	// Style for Bar Height
-	const barStyleHeight = $derived.by(() => {
-		const _ = value_normalized;
-		const currentTrackHeight = trackEl?.offsetHeight;
-		const hCenterY = handleCenterYFromTop;
-
-		if (
-			currentTrackHeight == null ||
-			currentTrackHeight === 0 ||
-			hCenterY == null
-		) {
-			return FALLBACK_BAR_HEIGHT;
-		}
-		const zeroPointY = currentTrackHeight / 2;
-		let barHeightPx;
-		if (value_normalized >= 0) {
-			barHeightPx = Math.max(0, zeroPointY - hCenterY);
-		} else {
-			barHeightPx = Math.max(0, hCenterY - zeroPointY);
-		}
-		return `${clamp(barHeightPx, 0, currentTrackHeight)}px`;
-	});
-
-	// Local handler to pass necessary info to parent
-	function localOnDragStart(event: MouseEvent | TouchEvent) {
-		onSliderDragStart(event, index, trackEl); // Pass trackEl for getBoundingClientRect in parent
-	}
-
-	// Local handler for immediate value change (e.g., click on track)
-	function localOnValueChange(event: MouseEvent | TouchEvent) {
-		onSliderValueChangeDuringDrag(event, index, trackEl);
-	}
+	// y-coord estimation where the visual center of the slider handle should be, relative to the top of the entire slider div
+	const handleCenterYFromTop = $derived(
+		mapRange(value_normalized, -1, 1, currentTrackHeight, 0),
+	);
 </script>
 
+<!-- Note: We are making a custom slider because browser-default ones are too finnicky to style and manipulate -->
 <div class="slider-wrapper flex flex-col items-center space-y-1 relative">
 	<div
 		class="option-label text-sm text-gray-600 font-medium h-10 flex items-center justify-center"
@@ -128,13 +54,13 @@
 		class="slider-track"
 		bind:this={trackEl}
 		bind:offsetHeight={currentTrackHeight}
-		onmousedown={(e) => {
-			localOnDragStart(e);
-			localOnValueChange(e);
+		onmousedown={(event) => {
+			onSliderDragStart(event, index, trackEl);
+			onSliderValueChangeDuringDrag(event, index, trackEl);
 		}}
-		ontouchstart={(e) => {
-			localOnDragStart(e);
-			localOnValueChange(e);
+		ontouchstart={(event) => {
+			onSliderDragStart(event, index, trackEl);
+			onSliderValueChangeDuringDrag(event, index, trackEl);
 		}}
 		role="slider"
 		aria-valuemin="-100"
@@ -147,21 +73,24 @@
 		<div class="zero-line-visual"></div>
 		<div
 			class="value-bar"
-			style:top={barStyleTop}
-			style:height={barStyleHeight}
+			style:top={`${value_normalized >= 0 ? handleCenterYFromTop : barMiddlePointY}px`}
+			style:height={`${Math.abs(handleCenterYFromTop - barMiddlePointY)}px`}
 			style:background-color={value_normalized >= 0
 				? POSITIVE_BAR_COLOR
 				: NEGATIVE_BAR_COLOR}
 		></div>
+		<!-- Custom slider handle, need to set  -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="slider-handle"
-			bind:this={handleEl}
-			bind:offsetHeight={currentHandleHeight}
-			style:top={handleStyleTop}
+			style:top={`${clamp(handleCenterYFromTop, SLIDER_HANDLE_CLAMP_PADDING, currentTrackHeight - SLIDER_HANDLE_CLAMP_PADDING)}px`}
 			class:dragging={isCurrentlyDraggingThis}
-			onmousedown={localOnDragStart}
-			ontouchstart={localOnDragStart}
+			onmousedown={(event) => {
+				onSliderDragStart(event, index, trackEl);
+			}}
+			ontouchstart={(event) => {
+				onSliderDragStart(event, index, trackEl);
+			}}
 		></div>
 	</div>
 	<div class="vote-value-display">
@@ -194,7 +123,7 @@
 		border-radius: 50%;
 		position: absolute;
 		left: 50%;
-		transform: translateX(-50%);
+		transform: translate(-50%, -50%);
 		cursor: grab;
 		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 		border: 2px solid white;
@@ -206,7 +135,7 @@
 	}
 	.slider-handle.dragging {
 		/* Applied via class:dragging in Slider.svelte */
-		background-color: #2563eb; /* blue-600 */
+		background-color: #8aafff; /* blue-600 */
 	}
 	.value-bar {
 		position: absolute;
