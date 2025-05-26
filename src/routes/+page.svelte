@@ -1,5 +1,5 @@
 <script lang="ts">
-	import MainView from "$lib/components/MainView.svelte";
+	import MainView from "./MainView.svelte";
 </script>
 
 <MainView />
